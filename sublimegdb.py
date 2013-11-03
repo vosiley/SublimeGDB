@@ -621,7 +621,10 @@ class GDBVariablesView(GDBView):
 
     def open(self):
         super(GDBVariablesView, self).open()
-        self.set_syntax("Packages/C++/C++.tmLanguage")
+        if is_d:
+            self.set_syntax("Packages/D/D.tmLanguage")
+        else:
+            self.set_syntax("Packages/C++/C++.tmLanguage")
         if self.is_open() and gdb_run_status == "stopped":
             self.update_variables(False)
 
@@ -780,7 +783,10 @@ class GDBCallstackView(GDBView):
 
     def open(self):
         super(GDBCallstackView, self).open()
-        self.set_syntax("Packages/C++/C++.tmLanguage")
+        if is_d:
+            self.set_syntax("Packages/D/D.tmLanguage")
+        else:
+            self.set_syntax("Packages/C++/C++.tmLanguage")
         if self.is_open() and gdb_run_status == "stopped":
             self.update_callstack()
 
@@ -852,7 +858,10 @@ class GDBThreadsView(GDBView):
 
     def open(self):
         super(GDBThreadsView, self).open()
-        self.set_syntax("Packages/C++/C++.tmLanguage")
+        if is_d:
+            self.set_syntax("Packages/D/D.tmLanguage")
+        else:
+            self.set_syntax("Packages/C++/C++.tmLanguage")
         if self.is_open() and gdb_run_status == "stopped":
             self.update_threads()
 
@@ -1559,14 +1568,15 @@ def is_dlang(view):
     # to be related to D language in order to
     # create the debug symbols first
     import os
-
+    global is_d
     filename, file_type = os.path.splitext(view.file_name())
     file_types = [".d", ".di"]
     if ("D.tmLanguage" in view.settings().get("syntax") or
         file_type in file_types):
-
+        is_d = True
         return True
     else:
+        is_d = False
         return False
 
 class GdbLaunch(sublime_plugin.WindowCommand):
