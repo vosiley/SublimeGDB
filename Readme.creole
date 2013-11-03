@@ -1,17 +1,17 @@
 === Fork info ===
-This fork adds D language debugging support.
+This fork adds D language debugging support for =**ublime Text 3**=.
 
 Status:
 
 The D language support is tested on:
 
-* Ubuntu 13.04 with the default system GDB and works
+* **Ubuntu 13.04** with the default system GDB and works
 
-* OS X 10.9 (Mavericks) with GDB 7.6.1 installed with Homebrew and signed in system:
-  * The OS X version does not show variable values
-  * The stop debug event is slow (use continue to reach the last breakpoint)
+* **OS X 10.9 (Mavericks)** with GDB 7.6.1 installed with Homebrew and signed in system:
+  ** The OS X version does not show variable values
+  ** The stop debug event is slow (use continue to reach the last breakpoint)
 
-* Windows currently untested
+* **Windows** currently is untested
 
 
 === Description ===
