@@ -13,6 +13,7 @@ The D language support is tested on:
 
 * **Windows** currently is untested
 
+**Following the original Readme**
 
 === Description ===
 GDB plugin for Sublime Text 2. Pull requests are more than welcome.
