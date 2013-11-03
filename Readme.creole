@@ -1,5 +1,5 @@
 === Fork info ===
-This fork adds D language debugging support for =**ublime Text 3**=.
+This fork adds D language debugging support for **Sublime Text 3**.
 
 Status:
 
