@@ -1307,7 +1307,8 @@ def resume():
 def get_result(line):
     res = result_regex.search(line).group(0)
     if res == "error" and not get_setting("i_know_how_to_use_gdb_thank_you_very_much", False):
-        sublime.error_message("%s\n\n%s" % (line, "\n".join(traceback.format_stack())))
+        sublime.error_message("{}\n\n".format(line))
+        #sublime.error_message("%s\n\n%s" % (line, "\n".join(traceback.format_stack())))
     return res
 
 
@@ -1490,7 +1491,7 @@ def programio(pty, tty):
                 log_debug("programoutput: %s" % line)
                 gdb_console_view.add_line(line, False)
             else:
-                if gdb_process.poll() is not None:
+                if gdb_process and gdb_process.poll() is not None:
                     break
                 time.sleep(0.1)
         except:
@@ -1622,16 +1623,21 @@ class GdbLaunch(sublime_plugin.WindowCommand):
                     workingdir = current_dir
 
                 # generate the debug symbols
-                cmd = "dmd -g " + filename+file_type
+                cmd = ["dmd -g {}{}".format(filename, file_type)]
                 process = subprocess.Popen(cmd, shell=True, cwd=workingdir,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
 
                 # wait for the process to terminate
                 out, err = process.communicate()
-                errcode = process.returncode
-                log_debug("Process: %s\n%s\n%s" % (out, err, errcode))
-
+                if err:
+                    log_debug("D Debug Process Error: {}".format(err))
+                return_code = process.returncode
+                if return_code:
+                    log_debug(
+                        "Process ended with return code: {}".format(return_code))
+                if out:
+                    log_debug("D Debug Process Output: {}".format(out))
                 # go on with GDB
                 commandline = get_setting("commandline")
 
@@ -1639,13 +1645,14 @@ class GdbLaunch(sublime_plugin.WindowCommand):
                 if not commandline or commandline == "":
                     commandline = "gdb --interpreter=mi"
 
-                cmd = commandline + " " + workingdir + os.path.sep + "./" + basename
+                cmd = ["{} {}{}./{}".format(
+                    commandline, workingdir, os.path.sep, basename)]
                 gdb_process = subprocess.Popen(cmd, shell=True, cwd=workingdir,
                             stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
 
-                log_debug("Process: %s\n" % gdb_process)
+                log_debug("D Debug Process Output: {}\n".format(gdb_process))
 
             # If not D language go on with the original implementation
             else:
