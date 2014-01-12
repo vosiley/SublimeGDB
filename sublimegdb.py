@@ -1655,8 +1655,9 @@ class GdbLaunch(sublime_plugin.WindowCommand):
                 # generate the debug symbols
                 if files_to_generate_symbols:
                     for obj in files_to_generate_symbols:
-                        print(obj)
-                        cmd = ["dmd -g {}".format(obj)]
+                        # change dmd to rdmd to generate object file for all
+                        # of the required source files
+                        cmd = ["rdmd --build-only -g {}".format(obj)]
                         process = subprocess.Popen(cmd, shell=True, cwd=workingdir,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
