@@ -1307,7 +1307,8 @@ def resume():
 def get_result(line):
     res = result_regex.search(line).group(0)
     if res == "error" and not get_setting("i_know_how_to_use_gdb_thank_you_very_much", False):
-        sublime.error_message("%s\n\n%s" % (line, "\n".join(traceback.format_stack())))
+        sublime.error_message("{}\n\n".format(line))
+        #sublime.error_message("%s\n\n%s" % (line, "\n".join(traceback.format_stack())))
     return res
 
 
@@ -1490,7 +1491,7 @@ def programio(pty, tty):
                 log_debug("programoutput: %s" % line)
                 gdb_console_view.add_line(line, False)
             else:
-                if gdb_process.poll() is not None:
+                if gdb_process and gdb_process.poll() is not None:
                     break
                 time.sleep(0.1)
         except:
@@ -1579,6 +1580,27 @@ def is_dlang(view):
         is_d = False
         return False
 
+def clear_build_files():
+    
+    # clear the build files
+    if files_to_generate_symbols:
+        log_debug("D Debug: cleaning build files\n")
+        for every in files_to_generate_symbols:
+            target = target =  every[0:-2]
+            target = target + ".o"
+            # clean the object files
+            args = ["rm {}".format(target)]
+            proc = subprocess.Popen(args, shell=True, cwd=workingdir,
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
+            # clean the binary files
+            target =  every[0:-2]
+            args = ["rm {}".format(target)]
+            proc = subprocess.Popen(args, shell=True, cwd=workingdir,
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE)
+        log_debug("D Debug: build files cleaned\n")
+
 class GdbLaunch(sublime_plugin.WindowCommand):
     def run(self):
         global gdb_process
@@ -1598,40 +1620,76 @@ class GdbLaunch(sublime_plugin.WindowCommand):
             # D lang patch in
             # create a branch dedicated to D language
             if is_dlang(view):
-                import os
+                import os, glob
                 # as in settings
                 target_file = get_setting("target_file")
                 # as in settings
+                global workingdir
                 workingdir = get_setting("workingdir")
                 filename, file_type = os.path.splitext(view.file_name())
                 basename = os.path.basename(filename)
                 current_dir = os.path.dirname(
                     os.path.abspath(filename + file_type))
 
-
+                # assume the working directory from
+                # the active file
+                if workingdir == "notset" or workingdir == "" or not workingdir:
+                    workingdir = current_dir
+                    
+                # get all source files from the working or current dir, 
+                # make debug symbols at each debug session, at the end clean them
+                global files_to_generate_symbols
+                files_to_generate_symbols = []
+                for item in glob.glob("{}/*.d".format(current_dir)):
+                    files_to_generate_symbols.append(item)
+                else:
+                    for item in glob.glob("{}/*.d".format(workingdir)):
+                        files_to_generate_symbols.append(item)
+                
                 # do not bother the user with error messages
                 # assume the current file as debug target
                 if (target_file == "notset" or target_file == "" or
                     not target_file):
                     target_file = filename + file_type
 
-
-                # as above assume the working directory from
-                # the active file
-                if workingdir == "notset" or workingdir == "" or not workingdir:
-                    workingdir = current_dir
-
                 # generate the debug symbols
-                cmd = "dmd -g " + filename+file_type
-                process = subprocess.Popen(cmd, shell=True, cwd=workingdir,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
+                if files_to_generate_symbols:
+                    for obj in files_to_generate_symbols:
+                        print(obj)
+                        cmd = ["dmd -g {}".format(obj)]
+                        process = subprocess.Popen(cmd, shell=True, cwd=workingdir,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+                        # wait for the process to terminate
+                        out, err = process.communicate()
+                        if err:
+                            log_debug("D Debug Process Error: {}".format(err))
+                        return_code = process.returncode
+                        if return_code:
+                            log_debug(
+                                "Process ended with return code: {}".format(
+                                    return_code))
+                        if out:
+                            log_debug("D Debug Process Output: {}".format(out))
+                else:
+                    files_to_generate_symbols.append("{}{}".format(
+                        filename, file_type))
+                    cmd = ["dmd -g {}".format(files_to_generate_symbols[0])]
+                    process = subprocess.Popen(cmd, shell=True, cwd=workingdir,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
 
-                # wait for the process to terminate
-                out, err = process.communicate()
-                errcode = process.returncode
-                log_debug("Process: %s\n%s\n%s" % (out, err, errcode))
-
+                    # wait for the process to terminate
+                    out, err = process.communicate()
+                    if err:
+                        log_debug("D Debug Process Error: {}".format(err))
+                    return_code = process.returncode
+                    if return_code:
+                        log_debug(
+                            "Process ended with return code: {}".format(
+                                return_code))
+                    if out:
+                        log_debug("D Debug Process Output: {}".format(out))
                 # go on with GDB
                 commandline = get_setting("commandline")
 
@@ -1639,13 +1697,14 @@ class GdbLaunch(sublime_plugin.WindowCommand):
                 if not commandline or commandline == "":
                     commandline = "gdb --interpreter=mi"
 
-                cmd = commandline + " " + workingdir + os.path.sep + "./" + basename
+                cmd = ["{} {}{}./{}".format(
+                    commandline, workingdir, os.path.sep, basename)]
                 gdb_process = subprocess.Popen(cmd, shell=True, cwd=workingdir,
                             stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
 
-                log_debug("Process: %s\n" % gdb_process)
+                log_debug("D Debug Process Output: {}\n".format(gdb_process))
 
             # If not D language go on with the original implementation
             else:
@@ -1767,6 +1826,7 @@ class GdbExit(sublime_plugin.WindowCommand):
         gdb_shutting_down = True
         wait_until_stopped()
         run_cmd("-gdb-exit", True)
+        clear_build_files()
 
     def is_enabled(self):
         return is_running()
@@ -1988,6 +2048,7 @@ class GdbEventListener(sublime_plugin.EventListener):
             update_view_markers(view)
 
     def on_close(self, view):
+        clear_build_files()
         for v in gdb_views:
             if v.is_open() and view.id() == v.get_view().id():
                 v.was_closed()
