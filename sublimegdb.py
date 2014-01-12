@@ -1676,7 +1676,7 @@ class GdbLaunch(sublime_plugin.WindowCommand):
                 else:
                     files_to_generate_symbols.append("{}{}".format(
                         filename, file_type))
-                    cmd = ["dmd -g {}".format(files_to_generate_symbols[0])]
+                    cmd = ["rdmd --force --build-only -g {}".format(files_to_generate_symbols[0])]
                     process = subprocess.Popen(cmd, shell=True, cwd=workingdir,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
