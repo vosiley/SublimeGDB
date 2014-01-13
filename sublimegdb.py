@@ -125,6 +125,9 @@ gdb_stack_frame = None
 gdb_stack_index = 0
 
 gdb_nonstop = False
+global files_to_generate_symbols
+files_to_generate_symbols = []
+
 
 if os.name == 'nt':
     gdb_nonstop = False
@@ -1638,7 +1641,6 @@ class GdbLaunch(sublime_plugin.WindowCommand):
                     
                 # get all source files from the working or current dir, 
                 # make debug symbols at each debug session, at the end clean them
-                global files_to_generate_symbols
                 files_to_generate_symbols = []
                 for item in glob.glob("{}/*.d".format(current_dir)):
                     files_to_generate_symbols.append(item)
